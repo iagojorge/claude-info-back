@@ -55,14 +55,36 @@ export default async function handler(req, res) {
           }
         });
 
+        console.log(`[PIX] Payment created:`, JSON.stringify(payment, null, 2));
+
+        // Extract QR Code from different possible locations
+        let qrCode = null;
+        let qrCodeBase64 = null;
+        let pixCode = null;
+
+        if (payment.point_of_interaction?.qr_code) {
+          qrCodeBase64 = payment.point_of_interaction.qr_code.qr_code_base64;
+          qrCode = payment.point_of_interaction.qr_code.qr_code;
+          pixCode = payment.point_of_interaction.qr_code.in_store_order_id;
+        }
+
+        // Fallback to transaction_details
+        if (!qrCodeBase64 && payment.transaction_details?.qr_code) {
+          qrCodeBase64 = payment.transaction_details.qr_code.qr_code_base64;
+          qrCode = payment.transaction_details.qr_code.qr_code;
+          pixCode = payment.transaction_details.qr_code.in_store_order_id;
+        }
+
         return res.status(200).json({
           payment_id: payment.id,
           status: payment.status || 'pending',
-          qr_code: payment.point_of_interaction?.qr_code?.in_store_order_id || payment.point_of_interaction?.qr_code?.qr_code || payment.qr_code,
-          qr_code_base64: payment.point_of_interaction?.qr_code?.qr_code_base64 || null
+          qr_code: qrCode,
+          qr_code_base64: qrCodeBase64,
+          pix_code: pixCode,
+          pix_copy_paste: pixCode || qrCode
         });
       } catch (err) {
-        console.error('PIX Error:', err.message);
+        console.error('PIX Error:', err.message, err);
         return res.status(500).json({ error: 'PIX Error: ' + err.message });
       }
     }
