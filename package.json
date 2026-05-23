@@ -1,0 +1,17 @@
+{
+  "name": "claude-info-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Moises Platform - Payment Processing",
+  "type": "module",
+  "engines": {
+    "node": "20.x"
+  },
+  "scripts": {
+    "dev": "echo 'Vercel serverless functions'",
+    "start": "echo 'Vercel serverless functions'"
+  },
+  "dependencies": {
+    "mercadopago": "^2.0.11"
+  },
+  "devDependencies": {}
+}

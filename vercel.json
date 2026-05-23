@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "env": {
+    "MP_ACCESS_TOKEN": "@mp_access_token",
+    "PRODUCT_PRICE": "@product_price",
+    "PRODUCT_NAME": "@product_name"
+  }
+}
