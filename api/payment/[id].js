@@ -7,7 +7,7 @@ const mpClient = new MercadoPagoConfig({
 const paymentClient = new Payment(mpClient);
 
 export default async function handler(req, res) {
-  // CORS Headers
+  // CORS Headers - SET FIRST
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
@@ -17,15 +17,23 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    const { id } = req.query;
+    // Extract ID from dynamic route parameter or query
+    let id = req.query.id;
+    
+    // In Vercel, [id].js captures the path segment
+    if (!id && req.url) {
+      const match = req.url.match(/^\/(\d+)/);
+      if (match) id = match[1];
+    }
 
     if (req.method === 'GET') {
-      if (!id || !/^\d+$/.test(id)) {
-        return res.status(400).json({ error: 'Invalid payment ID' });
+      if (!id || !/^\d+$/.test(String(id))) {
+        return res.status(400).json({ error: 'Invalid payment ID format', received: id });
       }
 
       try {
-        const payment = await paymentClient.get({ id });
+        console.log(`[${new Date().toISOString()}] GET /api/payment/${id}`);
+        const payment = await paymentClient.get({ id: String(id) });
         return res.status(200).json({
           payment_id: payment.id,
           status: payment.status
