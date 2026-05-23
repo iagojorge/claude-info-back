@@ -46,6 +46,8 @@ export default async function handler(req, res) {
       if (cpf && !isValidCPF(cpf)) return res.status(400).json({ error: 'CPF inválido' });
 
       try {
+        console.log(`[PIX] Creating payment with amount: ${process.env.PRODUCT_PRICE || '19.90'}`);
+        
         const payment = await paymentClient.create({
           body: {
             transaction_amount: parseFloat(process.env.PRODUCT_PRICE || '19.90'),
@@ -55,25 +57,34 @@ export default async function handler(req, res) {
           }
         });
 
-        console.log(`[PIX] Payment created:`, JSON.stringify(payment, null, 2));
+        console.log(`[PIX] Full response:`, JSON.stringify(payment, null, 2));
 
         // Extract QR Code from different possible locations
         let qrCode = null;
         let qrCodeBase64 = null;
         let pixCode = null;
 
+        // Try all possible locations where QR code might be
         if (payment.point_of_interaction?.qr_code) {
+          console.log(`[PIX] Found QR at point_of_interaction.qr_code`);
           qrCodeBase64 = payment.point_of_interaction.qr_code.qr_code_base64;
           qrCode = payment.point_of_interaction.qr_code.qr_code;
           pixCode = payment.point_of_interaction.qr_code.in_store_order_id;
         }
 
-        // Fallback to transaction_details
         if (!qrCodeBase64 && payment.transaction_details?.qr_code) {
+          console.log(`[PIX] Found QR at transaction_details.qr_code`);
           qrCodeBase64 = payment.transaction_details.qr_code.qr_code_base64;
           qrCode = payment.transaction_details.qr_code.qr_code;
           pixCode = payment.transaction_details.qr_code.in_store_order_id;
         }
+
+        if (!qrCodeBase64 && payment.qr_code) {
+          console.log(`[PIX] Found QR at root qr_code`);
+          qrCodeBase64 = payment.qr_code.qr_code_base64 || payment.qr_code;
+        }
+
+        console.log(`[PIX] Extracted - QR Base64: ${qrCodeBase64 ? 'YES' : 'NO'}, QR: ${qrCode ? 'YES' : 'NO'}, PIX: ${pixCode ? 'YES' : 'NO'}`);
 
         return res.status(200).json({
           payment_id: payment.id,
@@ -81,7 +92,11 @@ export default async function handler(req, res) {
           qr_code: qrCode,
           qr_code_base64: qrCodeBase64,
           pix_code: pixCode,
-          pix_copy_paste: pixCode || qrCode
+          pix_copy_paste: pixCode || qrCode,
+          _debug: {
+            has_point_of_interaction: !!payment.point_of_interaction,
+            has_transaction_details: !!payment.transaction_details
+          }
         });
       } catch (err) {
         console.error('PIX Error:', err.message, err);
